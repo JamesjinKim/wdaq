@@ -37,7 +37,7 @@ class HeaderPanel:
         # 제목
         title_label = tb.Label(
             self.frame,
-            text="🔌 ADS8668 8-Channel ADC Monitor",
+            text="ADS8668 8-Channel ADC Monitor",
             font=("DejaVu Sans", 18, "bold"),
             bootstyle="info"
         )
@@ -60,27 +60,27 @@ class HeaderPanel:
         tb.Label(interval_frame, text="sec", font=("DejaVu Sans", 9)).pack(side=LEFT, padx=(2, 0))
 
         # 버튼들
-        tb.Button(button_frame, text="💾 Save Data",
+        tb.Button(button_frame, text="Save Data",
                  command=self._on_save_data,
                  bootstyle="secondary", width=10).pack(side=RIGHT, padx=5)
 
-        tb.Button(button_frame, text="📂 Load",
+        tb.Button(button_frame, text="Load",
                  command=self._on_load_config,
                  bootstyle="secondary", width=8).pack(side=RIGHT, padx=5)
 
-        tb.Button(button_frame, text="💿 Save Config",
+        tb.Button(button_frame, text="Save Config",
                  command=self._on_save_config,
                  bootstyle="secondary", width=10).pack(side=RIGHT, padx=5)
 
         self.start_button = tb.Button(
-            button_frame, text="▶️ Start",
+            button_frame, text="Start",
             command=self._on_start_stop,
             bootstyle="success", width=10
         )
         self.start_button.pack(side=RIGHT, padx=5)
 
         self.connection_status = tb.Label(
-            button_frame, text="⚫ Disconnected",
+            button_frame, text="Disconnected",
             font=("DejaVu Sans", 10), bootstyle="danger"
         )
         self.connection_status.pack(side=RIGHT, padx=10)
@@ -113,16 +113,16 @@ class HeaderPanel:
     def set_connection_status(self, connected):
         """연결 상태 업데이트"""
         if connected:
-            self.connection_status.config(text="🟢 Connected", bootstyle="success")
+            self.connection_status.config(text="Connected", bootstyle="success")
         else:
-            self.connection_status.config(text="🔴 Disconnected", bootstyle="danger")
+            self.connection_status.config(text="Disconnected", bootstyle="danger")
 
     def set_monitoring_state(self, is_monitoring):
         """모니터링 상태 업데이트"""
         if is_monitoring:
-            self.start_button.config(text="⏸️ Stop", bootstyle="warning")
+            self.start_button.config(text="Stop", bootstyle="warning")
         else:
-            self.start_button.config(text="▶️ Start", bootstyle="success")
+            self.start_button.config(text="Start", bootstyle="success")
 
     def get_interval(self):
         """현재 측정 주기 반환"""

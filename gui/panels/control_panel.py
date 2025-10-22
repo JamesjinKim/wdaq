@@ -108,7 +108,7 @@ class ControlPanel:
         ).pack(anchor=W, pady=2)
 
         tb.Button(
-            tools_frame, text="📸 Save Snapshot", command=self._on_save_snapshot,
+            tools_frame, text="Save Snapshot", command=self._on_save_snapshot,
             bootstyle="info", width=18
         ).pack(fill=X, pady=2)
 
