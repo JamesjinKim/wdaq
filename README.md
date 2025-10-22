@@ -67,15 +67,17 @@ ads8668_monitor/
 
 ## 주요 기능
 
-### 1. Time Domain Display (ch1.png 참조)
+### 1. Time Domain Display
 - ✅ 실시간 8채널 전압 모니터링
-- ✅ 채널별 활성화/비활성화
+- ✅ 채널별 활성화/비활성화 (간단한 체크박스)
 - ✅ Y-Scale 자동/수동 조정 (Auto, ±10V, ±5V, Custom 등)
+- ✅ 프리셋 모드에서도 값 수정 가능 (Enter 키 적용)
 - ✅ 측정 커서 기능
 - ✅ 통계 계산 (RMS, Max, Min, Avg, P-P)
 - ✅ 차트 스냅샷 저장 (PNG/PDF)
+- ✅ 실시간 모니터링 최적화 (NavigationToolbar 제거)
 
-### 2. Spectral Analysis (ch2.png 참조) - 준비됨
+### 2. Spectral Analysis - 준비됨
 - ⭐ FFT 주파수 분석
 - ⭐ Harmonics 검출 (최대 9개)
 - ⭐ 윈도우 함수 선택 (Hann, Hamming, Blackman, B-Harris)
@@ -87,9 +89,14 @@ ads8668_monitor/
   - ENOB (Effective Number of Bits)
 
 ### 3. 데이터 관리
-- 💾 CSV 데이터 내보내기
-- 💿 JSON 설정 저장/불러오기
-- 📸 차트 스냅샷 저장 (PNG/PDF)
+- CSV 데이터 내보내기
+- JSON 설정 저장/불러오기
+- 차트 스냅샷 저장 (PNG/PDF)
+
+### 4. Raspberry Pi 최적화
+- 이모지 제거 (텍스트만 사용)
+- 불필요한 UI 요소 제거
+- 실시간 모니터링에 최적화된 깔끔한 인터페이스
 
 ---
 
@@ -168,7 +175,7 @@ pip3 install ttkbootstrap matplotlib numpy spidev RPi.GPIO
 - 레인지 선택: ±10V, ±5V, ±2.5V, ±1.25V, 0-10V, 0-5V 등
 
 ### 2. 모니터링 시작
-- 상단 **▶️ Start** 버튼 클릭
+- 상단 **Start** 버튼 클릭
 - 실시간 데이터 수집 시작
 - 차트에 데이터 표시
 - **Interval**: 측정 주기 설정 (0.1~10.0초)
@@ -176,11 +183,13 @@ pip3 install ttkbootstrap matplotlib numpy spidev RPi.GPIO
 ### 3. 차트 제어
 - **Y-Scale**:
   - Auto mode: 자동 범위 조정
-  - ±10V Full, ±5V Full: 프리셋
-  - Custom: 수동 입력
+  - ±10V Full, ±5V Full: 프리셋 (값 수정 가능)
+  - Custom: 완전 수동 입력
+  - 모든 모드에서 Y-Min/Y-Max 값 직접 수정 가능
+  - Enter 키로 빠른 적용
 - **Enable Cursor**: 측정 커서 활성화
-- **Channel Display**: 표시할 채널 선택/해제
-- **툴바**: 줌, 팬, 홈 버튼 사용 가능
+- **Channel Display**: 표시할 채널 선택/해제 (체크박스)
+- **Save Snapshot**: 차트를 이미지로 저장 (PNG/PDF)
 
 ### 4. 통계 확인
 - 우측 패널 **Statistics** 섹션
@@ -192,10 +201,10 @@ pip3 install ttkbootstrap matplotlib numpy spidev RPi.GPIO
   - **P-P**: Peak-to-Peak
 
 ### 5. 데이터 저장
-- **💾 Save Data**: CSV 파일로 데이터 저장
-- **💿 Save Config**: 현재 설정을 JSON으로 저장
-- **📂 Load**: 저장된 설정 불러오기
-- **📸 Save Snapshot**: 차트를 이미지로 저장 (PNG/PDF)
+- **Save Data**: CSV 파일로 데이터 저장
+- **Save Config**: 현재 설정을 JSON으로 저장
+- **Load**: 저장된 설정 불러오기
+- **Save Snapshot**: 차트를 이미지로 저장 (PNG/PDF)
 
 ---
 

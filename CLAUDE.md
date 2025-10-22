@@ -12,6 +12,8 @@ ADS8668 ADC Monitor - An 8-channel ADC monitoring application for the ADS8668 ch
 - GUI built with ttkbootstrap (modern tkinter theme)
 - Real-time monitoring with matplotlib charts
 - Supports both time-domain and spectral analysis
+- Optimized for Raspberry Pi: No emojis, no unnecessary UI elements
+- Clean, functional UI focused on real-time monitoring
 
 ## Development Commands
 
@@ -108,15 +110,16 @@ Utils Layer (utils/)
 - Uses `queue.Queue` for thread-safe data passing
 
 **Panels** (`gui/panels/`)
-- `header_panel.py` - Top header with start/stop, save/load buttons
+- `header_panel.py` - Top header with start/stop, save/load buttons (no emojis)
 - `channel_panel.py` - 8-channel grid (2x4) with ON/OFF toggles
-- `chart_panel.py` - matplotlib chart container
-- `control_panel.py` - Y-scale controls, cursor toggle, statistics display
+- `chart_panel.py` - matplotlib chart container (NO NavigationToolbar for real-time charts)
+- `control_panel.py` - Y-scale controls (manual adjustment), cursor toggle, statistics display
 - `status_bar.py` - Bottom status messages and time display
 
 **Widgets** (`gui/widgets/`)
 - `channel_widget.py` - Individual channel UI component (toggle, range selector, voltage display)
 - `chart_widget.py` - Base chart widget with `TimeDomainChart` and `SpectralChart` classes
+  - NavigationToolbar support is available but NOT used for real-time charts
 
 ### Utils Layer (`utils/`)
 
@@ -203,6 +206,30 @@ import logging
 logger = logging.getLogger(__name__)
 logger.info("message")
 ```
+
+### UI Design Guidelines (IMPORTANT for Raspberry Pi)
+
+**No Emojis Policy:**
+- NEVER use emojis in GUI text (buttons, labels, titles)
+- Emojis don't display correctly on Raspberry Pi systems
+- Use plain text for all UI elements
+
+**No NavigationToolbar for Real-time Charts:**
+- Do NOT use `NavigationToolbar2Tk` with real-time updating charts
+- Toolbar controls (zoom/pan) conflict with auto-refresh (500ms updates)
+- Save functionality: Use "Save Snapshot" button in Control Panel instead
+- Y-Scale control: Use Control Panel Y-Scale settings (Auto/Preset/Custom)
+
+**Channel Display:**
+- Use simple checkboxes without color indicators
+- Chart legend already shows channel colors
+- Avoid unicode characters (blocks, arrows, etc.)
+
+**Y-Scale Manual Adjustment:**
+- All preset modes (±10V, ±5V, etc.) allow manual value modification
+- Users can type custom values even in preset modes
+- Enter key applies changes without clicking Apply button
+- Real-time validation with visual feedback (red for errors)
 
 ## Common Tasks
 
