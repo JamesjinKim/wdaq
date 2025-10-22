@@ -118,26 +118,15 @@ class ControlPanel:
                                       padding=10, bootstyle="success")
         channel_frame.pack(fill=X, pady=(0, 10))
 
-        colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A',
-                 '#98D8C8', '#F7DC6F', '#BB8FCE', '#85C1E2']
-
         for ch in range(8):
             var = tk.BooleanVar(value=False)
             self.chart_channel_vars[ch] = var
 
-            ch_frame = tb.Frame(channel_frame)
-            ch_frame.pack(fill=X, pady=1)
-
             tb.Checkbutton(
-                ch_frame, text=f"CH{ch}", variable=var,
+                channel_frame, text=f"CH{ch}", variable=var,
                 command=lambda c=ch: self._on_channel_display_toggle(c),
-                bootstyle="success-toolbutton"
-            ).pack(side=LEFT)
-
-            # 색상 인디케이터
-            color_label = tk.Label(ch_frame, text="█", fg=colors[ch],
-                                  font=("DejaVu Sans", 12))
-            color_label.pack(side=RIGHT)
+                bootstyle="success-round-toggle"
+            ).pack(anchor=W, pady=2)
 
     def _create_statistics_section(self):
         """통계 정보 섹션"""
