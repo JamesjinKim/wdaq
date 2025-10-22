@@ -32,18 +32,14 @@ class ChartPanel:
 
     def _create_widgets(self):
         """위젯 생성"""
-        # 툴바 프레임
-        toolbar_frame = tb.Frame(self.frame)
-        toolbar_frame.pack(fill=X, pady=(0, 5))
-
         # 차트 생성
         if self.chart_type == 'time_domain':
             self.chart = TimeDomainChart(self.frame, time_window=self.time_window)
         elif self.chart_type == 'spectral':
             self.chart = SpectralChart(self.frame)
 
-        # 캔버스 생성
-        canvas_widget = self.chart.create_canvas(toolbar_parent=toolbar_frame)
+        # 캔버스 생성 (툴바 없이)
+        canvas_widget = self.chart.create_canvas(toolbar_parent=None)
         canvas_widget.pack(fill=BOTH, expand=True)
 
     def update_time_domain(self, channel_data, y_limits=None):
