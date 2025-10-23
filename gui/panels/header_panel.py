@@ -28,7 +28,7 @@ class HeaderPanel:
         self.callbacks = callbacks
 
         self.frame = tb.Frame(parent)
-        self.interval_var = tk.StringVar(value="1.0")
+        self.interval_var = tk.StringVar(value="3.0")  # 초기 인터벌 3초
 
         self._create_widgets()
 

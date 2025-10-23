@@ -48,7 +48,7 @@ class MainWindow:
         self.data_queue = queue.Queue()
 
         # 설정
-        self.sample_interval = 1.0
+        self.sample_interval = 3.0  # 초기 샘플링 인터벌 3초
         self.chart_time_window = 5
 
         # GPIO 알람 상태
@@ -138,6 +138,7 @@ class MainWindow:
         if self.adc.connect():
             self.header_panel.set_connection_status(True)
             self.status_bar.set_status("ADC connected successfully")
+            self.status_bar.set_sample_rate(self.sample_interval)  # 초기 샘플 레이트 표시
             # 기본 레인지 설정
             for ch in range(8):
                 self.adc.set_channel_range(ch, 0)
