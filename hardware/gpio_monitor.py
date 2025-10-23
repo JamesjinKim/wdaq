@@ -111,7 +111,7 @@ class GPIOMonitor:
 
     def _monitor_pin_gpiod(self, pin):
         """
-        gpiod 기반 핀 모니터링 (별도 스레드)
+        gpiod 기반 핀 모니터링 (별도 스레드) - 이벤트 카운팅용
 
         Args:
             pin: GPIO 핀 번호
@@ -120,72 +120,47 @@ class GPIOMonitor:
             chip = gpiod.Chip("gpiochip0")
             line = chip.get_line(pin)
 
-            # INPUT으로 요청하여 초기 상태 읽기
-            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_DIR_IN)
-
-            # 초기 상태 읽기
-            initial_state = line.get_value() == 1
-            self.pin_states[pin] = initial_state
-            logger.info(f"Started monitoring GPIO {pin} ({self.PIN_NAMES.get(pin, 'Unknown')}) - Initial state: {'HIGH' if initial_state else 'LOW'}")
-
-            # 이벤트 감지 모드로 재요청
-            line.release()
+            # 이벤트 감지 모드로 요청 (카운터용)
             line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_EV_BOTH_EDGES)
+
+            logger.info(f"Started monitoring GPIO {pin} ({self.PIN_NAMES.get(pin, 'Unknown')}) for event counting")
 
             debounce_time = 0.05  # 50ms 디바운스
             last_event = 0
-            poll_counter = 0
 
             while self.running:
-                # 1초 타임아웃으로 이벤트 대기
-                if line.event_wait(timeout=1.0):
-                    event = line.event_read()
-                    current_time = time.time()
+                # 무한 대기 (블로킹) - 이벤트 발생 시에만 처리
+                line.event_wait()
 
-                    # 디바운스 처리
-                    if current_time - last_event < debounce_time:
-                        continue
+                if not self.running:
+                    break
 
-                    last_event = current_time
+                event = line.event_read()
+                current_time = time.time()
 
-                    # 이벤트 타입 확인
-                    if event.type == gpiod.LineEvent.RISING_EDGE:
-                        edge = "rising"
-                        state = True
-                    else:
-                        edge = "falling"
-                        state = False
+                # 디바운스 처리
+                if current_time - last_event < debounce_time:
+                    continue
 
-                    # 상태 업데이트
-                    self.pin_states[pin] = state
-                    self.event_counts[pin][edge] += 1
-                    self.event_counts[pin]["total"] += 1
-                    self.last_event_time[pin] = current_time
+                last_event = current_time
 
-                    # 콜백 실행
-                    self._trigger_callbacks(pin, edge)
-
-                    logger.debug(f"GPIO {pin} {edge} edge detected (total: {self.event_counts[pin]['total']})")
+                # 이벤트 타입 확인
+                if event.type == gpiod.LineEvent.RISING_EDGE:
+                    edge = "rising"
+                    state = True
                 else:
-                    # 타임아웃 발생 - 주기적으로 현재 상태 폴링 (10초마다)
-                    poll_counter += 1
-                    if poll_counter >= 10:  # 10초마다 상태 읽기
-                        poll_counter = 0
-                        # 이벤트 모드에서는 직접 읽을 수 없으므로 재요청
-                        try:
-                            line.release()
-                            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_DIR_IN)
-                            current_state = line.get_value() == 1
+                    edge = "falling"
+                    state = False
 
-                            # 상태가 변경되었으면 업데이트 (이벤트 놓친 경우)
-                            if current_state != self.pin_states[pin]:
-                                logger.warning(f"GPIO {pin} state mismatch detected - updating to {'HIGH' if current_state else 'LOW'}")
-                                self.pin_states[pin] = current_state
+                # 이벤트 카운터만 업데이트 (상태는 별도로 읽음)
+                self.event_counts[pin][edge] += 1
+                self.event_counts[pin]["total"] += 1
+                self.last_event_time[pin] = current_time
 
-                            line.release()
-                            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_EV_BOTH_EDGES)
-                        except Exception as e:
-                            logger.error(f"Error polling GPIO {pin}: {e}")
+                # 콜백 실행
+                self._trigger_callbacks(pin, edge)
+
+                logger.debug(f"GPIO {pin} {edge} edge detected (total: {self.event_counts[pin]['total']})")
 
         except Exception as e:
             logger.error(f"Error monitoring GPIO {pin}: {e}")
@@ -244,7 +219,7 @@ class GPIOMonitor:
 
     def get_pin_state(self, pin):
         """
-        핀 상태 조회
+        핀 상태 조회 - 실시간으로 GPIO 상태를 읽음
 
         Args:
             pin: GPIO 핀 번호
@@ -252,7 +227,22 @@ class GPIOMonitor:
         Returns:
             bool: True=HIGH, False=LOW
         """
-        return self.pin_states.get(pin, False)
+        # gpiod로 실시간 상태 읽기 (이벤트와 별도)
+        if self.use_gpiod:
+            try:
+                chip = gpiod.Chip("gpiochip0")
+                line = chip.get_line(pin)
+                line.request(consumer="ads8668-read", type=gpiod.LINE_REQ_DIR_IN)
+                state = line.get_value() == 1
+                line.release()
+                self.pin_states[pin] = state  # 캐시 업데이트
+                return state
+            except Exception as e:
+                logger.error(f"Error reading GPIO {pin} state: {e}")
+                return self.pin_states.get(pin, False)
+        else:
+            # gpiod 없으면 캐시된 값 반환
+            return self.pin_states.get(pin, False)
 
     def get_event_count(self, pin, edge=None):
         """
