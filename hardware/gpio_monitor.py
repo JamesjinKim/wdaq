@@ -112,6 +112,7 @@ class GPIOMonitor:
     def _monitor_pin_gpiod(self, pin):
         """
         gpiod 기반 핀 모니터링 (별도 스레드) - 이벤트 카운팅용
+        wdaqV3_SampleCode.py와 동일한 방식
 
         Args:
             pin: GPIO 핀 번호
@@ -119,17 +120,15 @@ class GPIOMonitor:
         try:
             chip = gpiod.Chip("gpiochip0")
             line = chip.get_line(pin)
-
-            # 이벤트 감지 모드로 요청 (카운터용)
             line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_EV_BOTH_EDGES)
 
             logger.info(f"Started monitoring GPIO {pin} ({self.PIN_NAMES.get(pin, 'Unknown')}) for event counting")
 
-            debounce_time = 0.05  # 50ms 디바운스
-            last_event = 0
+            last_event_time = 0
+            debounce_time = 0.2  # 200ms 디바운스 (wdaqV3와 동일)
 
             while self.running:
-                # 무한 대기 (블로킹) - 이벤트 발생 시에만 처리
+                # 이벤트 대기 (블로킹) - wdaqV3_SampleCode.py와 동일
                 line.event_wait()
 
                 if not self.running:
@@ -139,28 +138,19 @@ class GPIOMonitor:
                 current_time = time.time()
 
                 # 디바운스 처리
-                if current_time - last_event < debounce_time:
-                    continue
+                if current_time - last_event_time > debounce_time:
+                    edge = "rising" if event.type == gpiod.LineEvent.RISING_EDGE else "falling"
 
-                last_event = current_time
+                    # 이벤트 카운터 업데이트
+                    self.event_counts[pin][edge] += 1
+                    self.event_counts[pin]["total"] += 1
+                    self.last_event_time[pin] = current_time
+                    last_event_time = current_time
 
-                # 이벤트 타입 확인
-                if event.type == gpiod.LineEvent.RISING_EDGE:
-                    edge = "rising"
-                    state = True
-                else:
-                    edge = "falling"
-                    state = False
+                    # 콜백 실행
+                    self._trigger_callbacks(pin, edge)
 
-                # 이벤트 카운터만 업데이트 (상태는 별도로 읽음)
-                self.event_counts[pin][edge] += 1
-                self.event_counts[pin]["total"] += 1
-                self.last_event_time[pin] = current_time
-
-                # 콜백 실행
-                self._trigger_callbacks(pin, edge)
-
-                logger.debug(f"GPIO {pin} {edge} edge detected (total: {self.event_counts[pin]['total']})")
+                    logger.debug(f"GPIO {pin} {edge} edge detected (total: {self.event_counts[pin]['total']})")
 
         except Exception as e:
             logger.error(f"Error monitoring GPIO {pin}: {e}")
