@@ -111,7 +111,7 @@ class GPIOMonitor:
 
     def _monitor_pin_gpiod(self, pin):
         """
-        gpiod 기반 핀 모니터링 (별도 스레드) - 이벤트 카운팅용
+        gpiod 기반 핀 모니터링 (별도 스레드) - 이벤트 카운팅 및 상태 업데이트
         wdaqV3_SampleCode.py와 동일한 방식
 
         Args:
@@ -120,9 +120,17 @@ class GPIOMonitor:
         try:
             chip = gpiod.Chip("gpiochip0")
             line = chip.get_line(pin)
+
+            # 먼저 초기 상태 읽기
+            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_DIR_IN)
+            initial_state = line.get_value() == 1
+            self.pin_states[pin] = initial_state
+            line.release()
+
+            # 이벤트 감지 모드로 전환
             line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_EV_BOTH_EDGES)
 
-            logger.info(f"Started monitoring GPIO {pin} ({self.PIN_NAMES.get(pin, 'Unknown')}) for event counting")
+            logger.info(f"Started monitoring GPIO {pin} ({self.PIN_NAMES.get(pin, 'Unknown')}) - Initial: {'HIGH' if initial_state else 'LOW'}")
 
             last_event_time = 0
             debounce_time = 0.2  # 200ms 디바운스 (wdaqV3와 동일)
@@ -140,6 +148,10 @@ class GPIOMonitor:
                 # 디바운스 처리
                 if current_time - last_event_time > debounce_time:
                     edge = "rising" if event.type == gpiod.LineEvent.RISING_EDGE else "falling"
+                    state = True if edge == "rising" else False
+
+                    # 상태 캐시 업데이트 (get_pin_state()에서 사용)
+                    self.pin_states[pin] = state
 
                     # 이벤트 카운터 업데이트
                     self.event_counts[pin][edge] += 1
@@ -209,30 +221,20 @@ class GPIOMonitor:
 
     def get_pin_state(self, pin):
         """
-        핀 상태 조회 - 실시간으로 GPIO 상태를 읽음
+        핀 상태 조회 - 이벤트 스레드에서 업데이트된 캐시 값 반환
 
         Args:
             pin: GPIO 핀 번호
 
         Returns:
             bool: True=HIGH, False=LOW
+
+        Note:
+            이벤트 스레드가 GPIO line을 점유하고 있으므로
+            직접 읽지 않고 캐시된 값을 반환함.
+            이벤트 발생 시마다 캐시가 자동 업데이트됨.
         """
-        # gpiod로 실시간 상태 읽기 (이벤트와 별도)
-        if self.use_gpiod:
-            try:
-                chip = gpiod.Chip("gpiochip0")
-                line = chip.get_line(pin)
-                line.request(consumer="ads8668-read", type=gpiod.LINE_REQ_DIR_IN)
-                state = line.get_value() == 1
-                line.release()
-                self.pin_states[pin] = state  # 캐시 업데이트
-                return state
-            except Exception as e:
-                logger.error(f"Error reading GPIO {pin} state: {e}")
-                return self.pin_states.get(pin, False)
-        else:
-            # gpiod 없으면 캐시된 값 반환
-            return self.pin_states.get(pin, False)
+        return self.pin_states.get(pin, False)
 
     def get_event_count(self, pin, edge=None):
         """
