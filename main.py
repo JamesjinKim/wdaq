@@ -22,9 +22,11 @@ from gui.main_window import MainWindow
 
 def main():
     """메인 함수"""
-    # 로거 설정
-    logger = setup_logger(name='ads8668_monitor', level=logging.INFO)
+    # 로거 설정 (DEBUG 레벨로 상세 로그 출력)
+    logger = setup_logger(name='ads8668_monitor', level=logging.DEBUG)
+    logger.info("="*60)
     logger.info("ADS8668 Monitor Starting...")
+    logger.info("="*60)
 
     try:
         # 메인 윈도우 실행

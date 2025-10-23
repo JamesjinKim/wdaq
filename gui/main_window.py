@@ -135,6 +135,8 @@ class MainWindow:
 
     def connect_adc(self):
         """ADC 연결"""
+        logger.info("-" * 60)
+        logger.info("Connecting to ADS8668...")
         if self.adc.connect():
             self.header_panel.set_connection_status(True)
             self.status_bar.set_status("ADC connected successfully")
@@ -142,8 +144,12 @@ class MainWindow:
             # 기본 레인지 설정
             for ch in range(8):
                 self.adc.set_channel_range(ch, 0)
+            logger.info("✓ ADC connected successfully")
+            logger.info(f"  Sample interval: {self.sample_interval}s")
+            logger.info("-" * 60)
         else:
             self.header_panel.set_connection_status(False)
+            logger.error("✗ Failed to connect to ADS8668")
             messagebox.showerror("Error", "Failed to connect to ADS8668")
 
     def on_channel_enable(self, channel, enabled):
@@ -206,6 +212,13 @@ class MainWindow:
         self.header_panel.set_monitoring_state(True)
         self.status_bar.set_status("Monitoring...")
 
+        logger.info("=" * 60)
+        logger.info("▶ ADC Monitoring STARTED")
+        logger.info(f"  Interval: {self.sample_interval}s")
+        enabled_ch = [ch for ch in range(8) if self.data_manager.channel_data[ch]['enabled']]
+        logger.info(f"  Enabled channels: {enabled_ch}")
+        logger.info("=" * 60)
+
         self.monitor_thread = threading.Thread(target=self.monitor_loop, daemon=True)
         self.monitor_thread.start()
 
@@ -215,16 +228,33 @@ class MainWindow:
         self.header_panel.set_monitoring_state(False)
         self.status_bar.set_status("Stopped")
 
+        logger.info("=" * 60)
+        logger.info("■ ADC Monitoring STOPPED")
+        logger.info("=" * 60)
+
     def monitor_loop(self):
         """모니터링 루프 (별도 스레드)"""
+        sample_count = 0
         while self.is_monitoring:
             try:
                 results = self.adc.read_all_channels()
                 if results:
+                    sample_count += 1
                     self.data_queue.put({
                         'timestamp': datetime.now(),
                         'channels': results
                     })
+
+                    # ADC 전압 값 로그 출력 (활성화된 채널만)
+                    enabled_channels = [ch for ch in range(8) if self.data_manager.channel_data[ch]['enabled']]
+                    if enabled_channels:
+                        log_msg = f"[ADC #{sample_count:04d}] "
+                        for ch in enabled_channels:
+                            if ch in results:
+                                voltage = results[ch]['voltage']
+                                log_msg += f"CH{ch}:{voltage:+7.4f}V  "
+                        logger.info(log_msg.rstrip())
+
                 time.sleep(self.sample_interval)
             except Exception as e:
                 logger.error(f"Monitor error: {e}")
@@ -378,14 +408,20 @@ class MainWindow:
 
     def start_gpio_monitoring(self):
         """GPIO 모니터링 시작"""
+        logger.info("-" * 60)
+        logger.info("Starting GPIO monitoring...")
+
         # GPIO 이벤트 콜백 등록
         self.gpio_monitor.register_callback(self.on_gpio_event)
 
         # 모니터링 시작
         if self.gpio_monitor.start_monitoring():
-            logger.info("GPIO monitoring started")
+            logger.info("✓ GPIO monitoring started")
+            logger.info(f"  Monitoring pins: {', '.join([str(p) for p in self.gpio_monitor.INPUT_PINS])}")
+            logger.info("-" * 60)
         else:
-            logger.warning("GPIO monitoring not available")
+            logger.warning("✗ GPIO monitoring not available (gpiod not installed)")
+            logger.info("-" * 60)
 
     def on_gpio_event(self, pin, edge):
         """

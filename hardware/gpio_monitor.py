@@ -162,7 +162,9 @@ class GPIOMonitor:
                     # 콜백 실행
                     self._trigger_callbacks(pin, edge)
 
-                    logger.debug(f"GPIO {pin} {edge} edge detected (total: {self.event_counts[pin]['total']})")
+                    # GPIO 상태 변경 로그 (INFO 레벨로 항상 표시)
+                    state_str = "HIGH" if state else "LOW"
+                    logger.info(f"[GPIO] {self.PIN_NAMES.get(pin, f'Pin {pin}'):15s} → {state_str:4s} (Events: {self.event_counts[pin]['total']:3d})")
 
         except Exception as e:
             logger.error(f"Error monitoring GPIO {pin}: {e}")
