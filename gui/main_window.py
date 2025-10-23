@@ -20,6 +20,7 @@ from gui.panels.control_panel import ControlPanel
 from gui.panels.status_bar import StatusBar
 
 from hardware.adc_controller import ADS8668Controller
+from hardware.gpio_monitor import GPIOMonitor
 from data.data_manager import DataManager
 from data.data_export import DataExporter
 from utils.config_manager import ConfigManager
@@ -35,6 +36,7 @@ class MainWindow:
     def __init__(self):
         # 하드웨어 및 데이터 관리
         self.adc = ADS8668Controller()
+        self.gpio_monitor = GPIOMonitor(enable_monitoring=True)
         self.data_manager = DataManager(max_points=300)
         self.config_manager = ConfigManager()
         self.data_exporter = DataExporter()
@@ -49,9 +51,16 @@ class MainWindow:
         self.sample_interval = 1.0
         self.chart_time_window = 5
 
+        # GPIO 알람 상태
+        self.alarm_active = False
+        self.alarm_channel = None
+        self.alarm_count = 0
+        self.last_alarm_time = 0
+
         # GUI 초기화
         self.setup_gui()
         self.connect_adc()
+        self.start_gpio_monitoring()
         self.start_update_loop()
 
     def setup_gui(self):
@@ -114,7 +123,9 @@ class MainWindow:
             'on_apply_custom_scale': self.on_apply_custom_scale,
             'on_cursor_toggle': self.on_cursor_toggle,
             'on_save_snapshot': self.save_chart_snapshot,
-            'on_channel_display_toggle': self.on_channel_display_toggle
+            'on_channel_display_toggle': self.on_channel_display_toggle,
+            'on_gpio_output_toggle': self.on_gpio_output_toggle,
+            'on_reset_gpio_counters': self.on_reset_gpio_counters
         })
         self.control_panel.pack(fill=BOTH, expand=True)
 
@@ -260,6 +271,9 @@ class MainWindow:
             self.update_chart()
             self.update_statistics()
 
+        # GPIO 상태 업데이트
+        self.update_gpio_status()
+
         # 500ms마다 반복
         self.root.after(500, self.update_gui)
 
@@ -361,11 +375,100 @@ class MainWindow:
             else:
                 messagebox.showerror("Error", "Failed to load config")
 
+    def start_gpio_monitoring(self):
+        """GPIO 모니터링 시작"""
+        # GPIO 이벤트 콜백 등록
+        self.gpio_monitor.register_callback(self.on_gpio_event)
+
+        # 모니터링 시작
+        if self.gpio_monitor.start_monitoring():
+            logger.info("GPIO monitoring started")
+        else:
+            logger.warning("GPIO monitoring not available")
+
+    def on_gpio_event(self, pin, edge):
+        """
+        GPIO 이벤트 콜백
+
+        Args:
+            pin: GPIO 핀 번호
+            edge: 'rising' 또는 'falling'
+        """
+        logger.info(f"GPIO {pin} {edge} edge detected")
+
+        # DIN 핀 (13번)에서 falling edge 감지 시 ADC 알람으로 처리
+        if pin == 13 and edge == "falling":
+            self.alarm_active = True
+            self.alarm_count += 1
+            self.last_alarm_time = time.time()
+            # 실제로는 ADC 레지스터를 읽어서 어느 채널인지 확인해야 함
+            # 여기서는 간단히 처리
+            self.alarm_channel = 0  # 임시
+
+    def update_gpio_status(self):
+        """GPIO 상태 업데이트 (500ms마다 호출)"""
+        # 모든 입력 핀 상태 업데이트
+        for pin in GPIOMonitor.INPUT_PINS:
+            state = self.gpio_monitor.get_pin_state(pin)
+            event_count = self.gpio_monitor.get_event_count(pin)
+            last_event_time = self.gpio_monitor.get_last_event_time(pin)
+
+            self.control_panel.update_gpio_input(
+                pin, state, event_count, last_event_time
+            )
+
+        # CS 핀 상태도 업데이트 (읽기 전용)
+        # CS 핀은 ADC 컨트롤러에서 제어하므로 상태만 표시
+        # 실제 상태는 모니터링되지 않으므로 기본값 사용
+
+        # 알람 상태 업데이트
+        self.control_panel.update_gpio_alarm(
+            active=self.alarm_active,
+            channel=self.alarm_channel,
+            last_time=self.last_alarm_time,
+            total_count=self.alarm_count
+        )
+
+        # 알람이 활성 상태이고 일정 시간 지났으면 비활성화
+        if self.alarm_active and (time.time() - self.last_alarm_time) > 5.0:
+            self.alarm_active = False
+
+    def on_gpio_output_toggle(self, pin, state):
+        """
+        GPIO 출력 토글 콜백
+
+        Args:
+            pin: GPIO 핀 번호
+            state: True=HIGH, False=LOW
+
+        Returns:
+            bool: 성공 여부
+        """
+        success = self.gpio_monitor.set_output(pin, state)
+        if success:
+            self.status_bar.set_status(
+                f"GPIO {pin} set to {'HIGH' if state else 'LOW'}"
+            )
+        else:
+            self.status_bar.set_status(
+                f"Failed to set GPIO {pin}"
+            )
+        return success
+
+    def on_reset_gpio_counters(self):
+        """GPIO 이벤트 카운터 리셋"""
+        self.gpio_monitor.reset_counters()
+        self.alarm_count = 0
+        self.last_alarm_time = 0
+        self.status_bar.set_status("GPIO event counters reset")
+
     def on_closing(self):
         """프로그램 종료"""
         if self.is_monitoring:
             self.stop_monitoring()
             time.sleep(1)
+        if self.gpio_monitor:
+            self.gpio_monitor.close()
         if self.adc:
             self.adc.close()
         self.root.destroy()

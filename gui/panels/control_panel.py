@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
 Control Panel Module
-차트 컨트롤 및 통계 패널
+차트 컨트롤 및 통계 패널 (탭 방식)
 """
 
 import tkinter as tk
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
+from gui.widgets.gpio_widget import GPIOStatusWidget, GPIOOutputWidget, GPIOAlarmWidget
 
 
 class ControlPanel:
@@ -31,7 +32,8 @@ class ControlPanel:
                 'on_apply_custom_scale': 커스텀 스케일 적용 콜백,
                 'on_cursor_toggle': 커서 토글 콜백,
                 'on_save_snapshot': 스냅샷 저장 콜백,
-                'on_channel_display_toggle': 채널 표시 토글 콜백
+                'on_channel_display_toggle': 채널 표시 토글 콜백,
+                'on_gpio_output_toggle': GPIO 출력 토글 콜백
             }
         """
         self.parent = parent
@@ -45,25 +47,46 @@ class ControlPanel:
         self.chart_channel_vars = {}
         self.stats_labels = {}
 
+        # GPIO 위젯들
+        self.gpio_input_widgets = {}
+        self.gpio_output_widgets = {}
+        self.gpio_alarm_widget = None
+
         self._create_widgets()
 
     def _create_widgets(self):
-        """위젯 생성"""
+        """위젯 생성 (탭 방식)"""
+        # 탭 위젯 생성
+        self.notebook = tb.Notebook(self.frame)
+        self.notebook.pack(fill=BOTH, expand=True)
+
+        # Statistics 탭
+        self.stats_tab = tb.Frame(self.notebook)
+        self.notebook.add(self.stats_tab, text="Statistics")
+        self._create_statistics_tab()
+
+        # GPIO 탭
+        self.gpio_tab = tb.Frame(self.notebook)
+        self.notebook.add(self.gpio_tab, text="GPIO")
+        self._create_gpio_tab()
+
+    def _create_statistics_tab(self):
+        """Statistics 탭 내용 생성"""
         # Y-Scale 설정
-        self._create_yscale_section()
+        self._create_yscale_section(self.stats_tab)
 
         # 차트 도구
-        self._create_tools_section()
+        self._create_tools_section(self.stats_tab)
 
         # 채널 표시 선택
-        self._create_channel_display_section()
+        self._create_channel_display_section(self.stats_tab)
 
         # 통계 정보
-        self._create_statistics_section()
+        self._create_statistics_section(self.stats_tab)
 
-    def _create_yscale_section(self):
+    def _create_yscale_section(self, parent):
         """Y-Scale 설정 섹션"""
-        scale_frame = tb.LabelFrame(self.frame, text="Y-Scale Control",
+        scale_frame = tb.LabelFrame(parent, text="Y-Scale Control",
                                     padding=10, bootstyle="primary")
         scale_frame.pack(fill=X, pady=(0, 10))
 
@@ -96,9 +119,9 @@ class ControlPanel:
         )
         self.apply_scale_btn.pack(fill=X, pady=(5, 0))
 
-    def _create_tools_section(self):
+    def _create_tools_section(self, parent):
         """차트 도구 섹션"""
-        tools_frame = tb.LabelFrame(self.frame, text="Chart Tools",
+        tools_frame = tb.LabelFrame(parent, text="Chart Tools",
                                     padding=10, bootstyle="secondary")
         tools_frame.pack(fill=X, pady=(0, 10))
 
@@ -112,9 +135,9 @@ class ControlPanel:
             bootstyle="info", width=18
         ).pack(fill=X, pady=2)
 
-    def _create_channel_display_section(self):
+    def _create_channel_display_section(self, parent):
         """채널 표시 선택 섹션"""
-        channel_frame = tb.LabelFrame(self.frame, text="Channel Display",
+        channel_frame = tb.LabelFrame(parent, text="Channel Display",
                                       padding=10, bootstyle="success")
         channel_frame.pack(fill=X, pady=(0, 10))
 
@@ -128,9 +151,9 @@ class ControlPanel:
                 bootstyle="success-round-toggle"
             ).pack(anchor=W, pady=2)
 
-    def _create_statistics_section(self):
+    def _create_statistics_section(self, parent):
         """통계 정보 섹션"""
-        stats_frame = tb.LabelFrame(self.frame, text="Statistics",
+        stats_frame = tb.LabelFrame(parent, text="Statistics",
                                     padding=10, bootstyle="warning")
         stats_frame.pack(fill=BOTH, expand=True)
 
@@ -268,6 +291,118 @@ class ControlPanel:
         """통계 표시 채널 반환"""
         ch_name = self.stats_channel_var.get()
         return int(ch_name.replace("CH", ""))
+
+    def _create_gpio_tab(self):
+        """GPIO 탭 내용 생성"""
+        # 스크롤 가능한 프레임
+        canvas = tk.Canvas(self.gpio_tab, highlightthickness=0)
+        scrollbar = tb.Scrollbar(self.gpio_tab, orient="vertical", command=canvas.yview)
+        scrollable_frame = tb.Frame(canvas)
+
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+
+        canvas.pack(side=LEFT, fill=BOTH, expand=True)
+        scrollbar.pack(side=RIGHT, fill=Y)
+
+        # 입력 핀 섹션
+        input_frame = tb.LabelFrame(scrollable_frame, text="Input Pins",
+                                    padding=10, bootstyle="info")
+        input_frame.pack(fill=X, pady=(0, 10))
+
+        # GPIO 모니터의 입력 핀 목록 (하드코딩 - 나중에 GPIOMonitor에서 가져올 수 있음)
+        input_pins = [
+            (13, "DIN (Alarm)"),
+            (5, "GPIO 5"),
+            (17, "GPIO 17"),
+            (22, "GPIO 22"),
+            (27, "GPIO 27")
+        ]
+
+        for pin, name in input_pins:
+            widget = GPIOStatusWidget(input_frame, pin, name)
+            widget.pack(fill=X, pady=2)
+            self.gpio_input_widgets[pin] = widget
+
+        # 출력 핀 섹션
+        output_frame = tb.LabelFrame(scrollable_frame, text="Output Pins",
+                                     padding=10, bootstyle="success")
+        output_frame.pack(fill=X, pady=(0, 10))
+
+        # CS 핀 (읽기 전용)
+        cs_widget = GPIOStatusWidget(output_frame, 8, "CS (SPI)")
+        cs_widget.pack(fill=X, pady=2)
+        self.gpio_input_widgets[8] = cs_widget  # CS는 상태만 표시
+
+        # DOUT 핀 (제어 가능)
+        dout_widget = GPIOOutputWidget(
+            output_frame, 12, "DOUT",
+            on_toggle=self._on_gpio_output_toggle
+        )
+        dout_widget.pack(fill=X, pady=2)
+        self.gpio_output_widgets[12] = dout_widget
+
+        # ADC 알람 섹션
+        alarm_frame = tb.LabelFrame(scrollable_frame, text="ADC Alarm",
+                                    padding=10, bootstyle="warning")
+        alarm_frame.pack(fill=X, pady=(0, 10))
+
+        self.gpio_alarm_widget = GPIOAlarmWidget(alarm_frame)
+        self.gpio_alarm_widget.pack(fill=X)
+
+        # 이벤트 카운터 리셋 버튼
+        reset_frame = tb.Frame(scrollable_frame)
+        reset_frame.pack(fill=X, pady=(10, 0))
+
+        tb.Button(
+            reset_frame,
+            text="Reset Event Counters",
+            command=self._on_reset_gpio_counters,
+            bootstyle="secondary",
+            width=20
+        ).pack(fill=X, padx=5)
+
+    def _on_gpio_output_toggle(self, pin, state):
+        """GPIO 출력 토글 콜백"""
+        if self.callbacks.get('on_gpio_output_toggle'):
+            return self.callbacks['on_gpio_output_toggle'](pin, state)
+        return False
+
+    def _on_reset_gpio_counters(self):
+        """GPIO 이벤트 카운터 리셋"""
+        if self.callbacks.get('on_reset_gpio_counters'):
+            self.callbacks['on_reset_gpio_counters']()
+
+    def update_gpio_input(self, pin, state, event_count=0, last_event_time=0):
+        """
+        GPIO 입력 상태 업데이트
+
+        Args:
+            pin: GPIO 핀 번호
+            state: True=HIGH, False=LOW
+            event_count: 이벤트 총 횟수
+            last_event_time: 마지막 이벤트 시각
+        """
+        if pin in self.gpio_input_widgets:
+            self.gpio_input_widgets[pin].update_state(state, event_count, last_event_time)
+
+    def update_gpio_alarm(self, active=False, channel=None, last_time=0, total_count=0):
+        """
+        ADC 알람 상태 업데이트
+
+        Args:
+            active: 현재 알람 활성 여부
+            channel: 트리거된 채널
+            last_time: 마지막 알람 시각
+            total_count: 총 알람 횟수
+        """
+        if self.gpio_alarm_widget:
+            self.gpio_alarm_widget.update_alarm(active, channel, last_time, total_count)
 
     def pack(self, **kwargs):
         """팩 배치"""
