@@ -419,7 +419,12 @@ class MainWindow:
 
         # CS 핀 상태도 업데이트 (읽기 전용)
         # CS 핀은 ADC 컨트롤러에서 제어하므로 상태만 표시
-        # 실제 상태는 모니터링되지 않으므로 기본값 사용
+        # ADC가 연결되어 있고 SPI 통신 중일 때는 HIGH (대부분의 시간)
+        if self.adc.is_connected:
+            # CS 핀은 기본적으로 HIGH 상태 유지
+            self.control_panel.update_gpio_input(8, True, 0, 0)
+        else:
+            self.control_panel.update_gpio_input(8, False, 0, 0)
 
         # 알람 상태 업데이트
         self.control_panel.update_gpio_alarm(

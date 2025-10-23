@@ -119,12 +119,22 @@ class GPIOMonitor:
         try:
             chip = gpiod.Chip("gpiochip0")
             line = chip.get_line(pin)
-            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_EV_BOTH_EDGES)
 
-            logger.info(f"Started monitoring GPIO {pin} ({self.PIN_NAMES.get(pin, 'Unknown')})")
+            # INPUT으로 요청하여 초기 상태 읽기
+            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_DIR_IN)
+
+            # 초기 상태 읽기
+            initial_state = line.get_value() == 1
+            self.pin_states[pin] = initial_state
+            logger.info(f"Started monitoring GPIO {pin} ({self.PIN_NAMES.get(pin, 'Unknown')}) - Initial state: {'HIGH' if initial_state else 'LOW'}")
+
+            # 이벤트 감지 모드로 재요청
+            line.release()
+            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_EV_BOTH_EDGES)
 
             debounce_time = 0.05  # 50ms 디바운스
             last_event = 0
+            poll_counter = 0
 
             while self.running:
                 # 1초 타임아웃으로 이벤트 대기
@@ -156,6 +166,26 @@ class GPIOMonitor:
                     self._trigger_callbacks(pin, edge)
 
                     logger.debug(f"GPIO {pin} {edge} edge detected (total: {self.event_counts[pin]['total']})")
+                else:
+                    # 타임아웃 발생 - 주기적으로 현재 상태 폴링 (10초마다)
+                    poll_counter += 1
+                    if poll_counter >= 10:  # 10초마다 상태 읽기
+                        poll_counter = 0
+                        # 이벤트 모드에서는 직접 읽을 수 없으므로 재요청
+                        try:
+                            line.release()
+                            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_DIR_IN)
+                            current_state = line.get_value() == 1
+
+                            # 상태가 변경되었으면 업데이트 (이벤트 놓친 경우)
+                            if current_state != self.pin_states[pin]:
+                                logger.warning(f"GPIO {pin} state mismatch detected - updating to {'HIGH' if current_state else 'LOW'}")
+                                self.pin_states[pin] = current_state
+
+                            line.release()
+                            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_EV_BOTH_EDGES)
+                        except Exception as e:
+                            logger.error(f"Error polling GPIO {pin}: {e}")
 
         except Exception as e:
             logger.error(f"Error monitoring GPIO {pin}: {e}")
