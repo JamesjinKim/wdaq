@@ -34,15 +34,15 @@ class GPIOStatusWidget(tb.Frame):
         container = tb.Frame(self)
         container.pack(fill=X, pady=2)
 
-        # 좌측: 핀 이름
+        # 좌측: 핀 이름 (너비 증가)
         name_label = tb.Label(
             container,
             text=self.pin_name,
-            width=12,
+            width=15,
             anchor=W,
             font=("Helvetica", 9)
         )
-        name_label.pack(side=LEFT, padx=(5, 10))
+        name_label.pack(side=LEFT, padx=(5, 5))
 
         # 중앙: 상태 표시 (원형 인디케이터)
         self.state_indicator = tb.Label(
@@ -52,7 +52,7 @@ class GPIOStatusWidget(tb.Frame):
             font=("Courier", 10, "bold"),
             foreground="gray"
         )
-        self.state_indicator.pack(side=LEFT, padx=5)
+        self.state_indicator.pack(side=LEFT, padx=3)
 
         # 상태 텍스트
         self.state_label = tb.Label(
@@ -62,13 +62,13 @@ class GPIOStatusWidget(tb.Frame):
             anchor=W,
             font=("Helvetica", 9)
         )
-        self.state_label.pack(side=LEFT, padx=5)
+        self.state_label.pack(side=LEFT, padx=3)
 
-        # 우측: 이벤트 카운트
+        # 우측: 이벤트 카운트 (너비 증가)
         self.event_label = tb.Label(
             container,
             text="Events: 0",
-            width=12,
+            width=18,
             anchor=E,
             font=("Helvetica", 8),
             foreground="gray"
@@ -144,15 +144,15 @@ class GPIOOutputWidget(tb.Frame):
         container = tb.Frame(self)
         container.pack(fill=X, pady=2)
 
-        # 좌측: 핀 이름
+        # 좌측: 핀 이름 (너비 증가)
         name_label = tb.Label(
             container,
             text=self.pin_name,
-            width=12,
+            width=15,
             anchor=W,
             font=("Helvetica", 9)
         )
-        name_label.pack(side=LEFT, padx=(5, 10))
+        name_label.pack(side=LEFT, padx=(5, 5))
 
         # 중앙: 상태 표시
         self.state_indicator = tb.Label(
@@ -162,7 +162,7 @@ class GPIOOutputWidget(tb.Frame):
             font=("Courier", 10, "bold"),
             foreground="gray"
         )
-        self.state_indicator.pack(side=LEFT, padx=5)
+        self.state_indicator.pack(side=LEFT, padx=3)
 
         # 상태 텍스트
         self.state_label = tb.Label(
@@ -172,13 +172,13 @@ class GPIOOutputWidget(tb.Frame):
             anchor=W,
             font=("Helvetica", 9)
         )
-        self.state_label.pack(side=LEFT, padx=5)
+        self.state_label.pack(side=LEFT, padx=3)
 
-        # 우측: 토글 버튼
+        # 우측: 토글 버튼 (너비 증가)
         self.toggle_btn = tb.Button(
             container,
             text="Set HIGH",
-            width=10,
+            width=12,
             command=self.toggle_output,
             bootstyle="success-outline"
         )

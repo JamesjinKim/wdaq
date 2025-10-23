@@ -113,8 +113,8 @@ class MainWindow:
         )
         self.chart_panel.pack(fill=BOTH, expand=True)
 
-        # 우측: 컨트롤 패널
-        right_frame = tb.Frame(content_frame, width=280)
+        # 우측: 컨트롤 패널 (GPIO 텍스트 표시를 위해 너비 확대)
+        right_frame = tb.Frame(content_frame, width=360)
         right_frame.pack(side=RIGHT, fill=Y, padx=(5, 0))
         right_frame.pack_propagate(False)
 
