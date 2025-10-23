@@ -22,8 +22,14 @@ from gui.main_window import MainWindow
 
 def main():
     """메인 함수"""
-    # 로거 설정 (DEBUG 레벨로 상세 로그 출력)
-    logger = setup_logger(name='ads8668_monitor', level=logging.DEBUG)
+    # 루트 로거 설정 (모든 모듈의 로그 출력)
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%H:%M:%S'
+    )
+
+    logger = logging.getLogger(__name__)
     logger.info("="*60)
     logger.info("ADS8668 Monitor Starting...")
     logger.info("="*60)

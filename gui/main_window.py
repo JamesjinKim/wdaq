@@ -431,13 +431,12 @@ class MainWindow:
             pin: GPIO 핀 번호
             edge: 'rising' 또는 'falling'
         """
-        logger.info(f"GPIO {pin} {edge} edge detected")
-
         # DIN 핀 (13번)에서 falling edge 감지 시 ADC 알람으로 처리
         if pin == 13 and edge == "falling":
             self.alarm_active = True
             self.alarm_count += 1
             self.last_alarm_time = time.time()
+            logger.warning(f"[ALARM] ADC Alarm detected on DIN (GPIO 13)")
             # 실제로는 ADC 레지스터를 읽어서 어느 채널인지 확인해야 함
             # 여기서는 간단히 처리
             self.alarm_channel = 0  # 임시

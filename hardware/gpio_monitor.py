@@ -164,7 +164,8 @@ class GPIOMonitor:
 
                     # GPIO 상태 변경 로그 (INFO 레벨로 항상 표시)
                     state_str = "HIGH" if state else "LOW"
-                    logger.info(f"[GPIO] {self.PIN_NAMES.get(pin, f'Pin {pin}'):15s} → {state_str:4s} (Events: {self.event_counts[pin]['total']:3d})")
+                    pin_name = self.PIN_NAMES.get(pin, f'Pin {pin}')
+                    logger.info(f"[GPIO Pin {pin:2d}] {pin_name:15s} → {state_str:4s} (Total: {self.event_counts[pin]['total']:3d}, ↑{self.event_counts[pin]['rising']:3d} ↓{self.event_counts[pin]['falling']:3d})")
 
         except Exception as e:
             logger.error(f"Error monitoring GPIO {pin}: {e}")
