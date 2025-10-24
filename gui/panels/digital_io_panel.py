@@ -89,25 +89,25 @@ class DigitalIOPanel(ttk.Frame):
         pin_label = ttk.Label(parent, text=f"GPIO {pin}:", width=10)
         pin_label.grid(row=row, column=0, sticky=W, padx=5, pady=5)
 
-        # ON 버튼
-        on_btn = ttkb.Button(
+        # LOW 버튼
+        low_btn = ttkb.Button(
             parent,
-            text="ON",
-            bootstyle=SUCCESS,
-            width=8,
-            command=lambda: self._toggle_output(pin, True)
-        )
-        on_btn.grid(row=row, column=1, padx=5, pady=5)
-
-        # OFF 버튼
-        off_btn = ttkb.Button(
-            parent,
-            text="OFF",
+            text="LOW",
             bootstyle=SECONDARY,
             width=8,
             command=lambda: self._toggle_output(pin, False)
         )
-        off_btn.grid(row=row, column=2, padx=5, pady=5)
+        low_btn.grid(row=row, column=1, padx=5, pady=5)
+
+        # HIGH 버튼
+        high_btn = ttkb.Button(
+            parent,
+            text="HIGH",
+            bootstyle=SUCCESS,
+            width=8,
+            command=lambda: self._toggle_output(pin, True)
+        )
+        high_btn.grid(row=row, column=2, padx=5, pady=5)
 
         # 상태 표시 레이블
         state_label = ttk.Label(parent, text="State:", width=6)
@@ -123,8 +123,8 @@ class DigitalIOPanel(ttk.Frame):
 
         # 위젯 참조 저장
         setattr(self, f"state_label_{pin}", state_value)
-        setattr(self, f"on_btn_{pin}", on_btn)
-        setattr(self, f"off_btn_{pin}", off_btn)
+        setattr(self, f"low_btn_{pin}", low_btn)
+        setattr(self, f"high_btn_{pin}", high_btn)
 
     def _create_input_section(self):
         """디지털 입력 섹션 생성"""
@@ -307,12 +307,12 @@ class DigitalIOPanel(ttk.Frame):
 
         # 출력 버튼 활성화/비활성화
         for pin in [23, 24]:
-            on_btn = getattr(self, f"on_btn_{pin}", None)
-            off_btn = getattr(self, f"off_btn_{pin}", None)
-            if on_btn:
-                on_btn.config(state=state)
-            if off_btn:
-                off_btn.config(state=state)
+            low_btn = getattr(self, f"low_btn_{pin}", None)
+            high_btn = getattr(self, f"high_btn_{pin}", None)
+            if low_btn:
+                low_btn.config(state=state)
+            if high_btn:
+                high_btn.config(state=state)
 
         # 모니터링 버튼 활성화/비활성화
         self.monitor_btn.config(state=state)
