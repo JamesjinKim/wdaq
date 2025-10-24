@@ -54,13 +54,15 @@ ads8668_monitor/
     │   ├── header_panel.py        # 상단 헤더 (연결 상태, 제어 버튼)
     │   ├── channel_panel.py       # 채널 설정 패널 (8채널 관리)
     │   ├── chart_panel.py         # 차트 표시 패널
-    │   ├── control_panel.py       # 차트 컨트롤 및 통계
+    │   ├── control_panel.py       # 차트 컨트롤 및 통계 (탭: Statistics/GPIO/Digital I/O)
+    │   ├── digital_io_panel.py    # 디지털 입출력 제어 패널
     │   └── status_bar.py          # 하단 상태바
     │
     └── widgets/                   # 재사용 위젯
         ├── __init__.py
         ├── channel_widget.py      # 개별 채널 위젯
-        └── chart_widget.py        # 차트 위젯 (Time/Spectral)
+        ├── chart_widget.py        # 차트 위젯 (Time/Spectral)
+        └── gpio_widget.py         # GPIO 상태/제어 위젯
 ```
 
 ---
@@ -88,15 +90,31 @@ ads8668_monitor/
   - SINAD (Signal-to-Noise And Distortion)
   - ENOB (Effective Number of Bits)
 
-### 3. 데이터 관리
+### 3. GPIO 및 Digital I/O 제어 ✨ (신규)
+- ✅ **Digital Output 제어**
+  - GPIO 23, 24 출력 제어 (ON/OFF 버튼)
+  - 실시간 상태 표시 (HIGH/LOW)
+- ✅ **Digital Input 모니터링**
+  - GPIO 13 입력 상태 감시
+  - Rising/Falling 엣지 감지
+  - 이벤트 로그 기록
+  - Start/Stop Monitoring 제어
+- ✅ **GPIO 상태 모니터링**
+  - GPIO 5, 17, 22, 27 입력 감시
+  - GPIO 8 (CS) 상태 표시
+  - 이벤트 카운터 및 통계
+  - ADC 알람 감지 (GPIO 13)
+
+### 4. 데이터 관리
 - CSV 데이터 내보내기
 - JSON 설정 저장/불러오기
 - 차트 스냅샷 저장 (PNG/PDF)
 
-### 4. Raspberry Pi 최적화
+### 5. Raspberry Pi 최적화
 - 이모지 제거 (텍스트만 사용)
 - 불필요한 UI 요소 제거
 - 실시간 모니터링에 최적화된 깔끔한 인터페이스
+- 하드웨어 연결 없이도 GUI 테스트 가능 (Test Mode)
 
 ---
 
@@ -200,7 +218,21 @@ pip3 install ttkbootstrap matplotlib numpy spidev RPi.GPIO
   - **Avg**: 평균값
   - **P-P**: Peak-to-Peak
 
-### 5. 데이터 저장
+### 5. Digital I/O 제어 ✨ (Control 패널 → Digital I/O 탭)
+- **Digital Output**:
+  - GPIO 23, 24 제어
+  - [ON] [OFF] 버튼으로 간편 제어
+  - 실시간 상태 표시 (HIGH/LOW, 색상 변경)
+- **Digital Input**:
+  - GPIO 13 모니터링
+  - [Start Monitoring] / [Stop Monitoring]
+  - 상태 표시: HIGH/LOW
+- **Event Log**:
+  - 입력 이벤트 자동 기록
+  - 타임스탬프, GPIO 핀, 엣지 타입, 상태 표시
+  - [Clear Log] 버튼으로 로그 삭제
+
+### 6. 데이터 저장
 - **Save Data**: CSV 파일로 데이터 저장
 - **Save Config**: 현재 설정을 JSON으로 저장
 - **Load**: 저장된 설정 불러오기
@@ -270,6 +302,15 @@ pip3 list | grep -E 'ttkbootstrap|matplotlib|numpy'
   - 채널 레인지 설정 (±10V ~ ±0.5V, 0-10V ~ 0-1.25V)
   - ADC 데이터 읽기
   - 전압 값 계산
+- **gpio_monitor.py**: GPIO 입력 모니터링
+  - gpiod 기반 GPIO 이벤트 감지
+  - 멀티 핀 동시 모니터링 (5, 13, 17, 22, 27)
+  - Rising/Falling 엣지 감지
+  - 이벤트 카운터 및 통계
+- **gpio_controller.py**: GPIO 출력 제어
+  - GPIO 23, 24 디지털 출력 제어
+  - GPIO 13 입력 모니터링
+  - gpiod 기반 안정적인 제어
 
 ### Data Layer (`data/`)
 - **data_manager.py**: 실시간 데이터 버퍼 관리
@@ -299,11 +340,13 @@ pip3 list | grep -E 'ttkbootstrap|matplotlib|numpy'
   - header_panel.py: 상단 헤더
   - channel_panel.py: 8채널 관리
   - chart_panel.py: 차트 표시
-  - control_panel.py: 컨트롤 및 통계
+  - control_panel.py: 탭 기반 컨트롤 (Statistics/GPIO/Digital I/O)
+  - digital_io_panel.py: 디지털 입출력 제어 패널
   - status_bar.py: 상태바
 - **widgets/**: 재사용 가능한 UI 컴포넌트
   - channel_widget.py: 개별 채널 위젯
   - chart_widget.py: 차트 위젯
+  - gpio_widget.py: GPIO 상태/제어 위젯
 
 ### Utils Layer (`utils/`)
 - **config_manager.py**: 설정 관리
@@ -412,26 +455,42 @@ Egicon Project Team
 
 ---
 
-레이아웃 구조
-┌──────────────────────────────────────────────────────────────┐
-│  Header Panel (Start/Stop, Config, Interval)                │
-├──────────────┬──────────────────────────┬────────────────────┤
-│              │                          │  Control Panel     │
-│  Channel     │      Chart Panel         │  - Y-Scale         │
-│  Panel       │      (Time Domain)       │  - Statistics      │
-│  (8 Ch)      │                          │  - GPIO Status     │
-│              │                          ├────────────────────┤
-│              │                          │  Digital I/O Panel │
-│              │                          │  - Output (23,24)  │
-│              │                          │  - Input (13)      │
-│              │                          │  - Event Log       │
-└──────────────┴──────────────────────────┴────────────────────┘
-│  Status Bar (Time, Messages)                                 │
-└──────────────────────────────────────────────────────────────┘
+## 레이아웃 구조
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Header Panel (Start/Stop, Config, Interval)                    │
+├──────────────┬──────────────────────────┬────────────────────────┤
+│              │                          │ [Statistics] [GPIO]    │
+│              │                          │ [Digital I/O] ✨       │
+│  Channel     │      Chart Panel         ├────────────────────────┤
+│  Panel       │      (Time Domain)       │ [Statistics Tab]       │
+│  (8 Ch)      │                          │ - Y-Scale Control      │
+│              │                          │ - Chart Tools          │
+│              │                          │ - Channel Display      │
+│  CH0-CH7     │   600px (Fixed Width)    │ - Statistics Info      │
+│              │                          ├────────────────────────┤
+│              │                          │ [GPIO Tab]             │
+│              │                          │ - GPIO Input Status    │
+│              │                          │ - GPIO Output Control  │
+│              │                          │ - Alarm Status         │
+│              │                          ├────────────────────────┤
+│              │                          │ [Digital I/O Tab] ✨   │
+│              │                          │ - GPIO 23, 24 Output   │
+│              │                          │ - GPIO 13 Input        │
+│              │                          │ - Event Log            │
+└──────────────┴──────────────────────────┴────────────────────────┘
+│  Status Bar (Time, Messages, Sample Rate)                        │
+└──────────────────────────────────────────────────────────────────┘
+```
 
 ## 버전 정보
 
-- **Version**: 2.0 (Modular)
+- **Version**: 2.1 (Digital I/O 추가)
 - **From**: gui_wdaq3.py (900줄 단일 파일)
-- **To**: 27개 모듈 (3,648줄)
-- **Date**: 2025-10-21
+- **To**: 30+ 모듈 (4,000+ 줄)
+- **Latest Update**: 2025-10-24
+  - Digital I/O 제어 패널 추가 (GPIO 23, 24, 13)
+  - 하드웨어 연결 없이 GUI 테스트 모드 지원
+  - 차트 크기 최적화 (600px 고정)
+  - Control Panel 탭 구조 개선 (Statistics/GPIO/Digital I/O)

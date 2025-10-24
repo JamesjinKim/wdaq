@@ -6,7 +6,6 @@ ADS8668 ADC Monitor - Main Entry Point
 
 import sys
 import logging
-from tkinter import messagebox
 
 # 한글 폰트 설정 (matplotlib)
 import matplotlib.pyplot as plt
@@ -39,9 +38,11 @@ def main():
         app = MainWindow()
         app.run()
 
+    except KeyboardInterrupt:
+        logger.info("Program interrupted by user")
+        sys.exit(0)
     except Exception as e:
         logger.error(f"Program error: {e}", exc_info=True)
-        messagebox.showerror("Error", f"Failed to start:\n{e}")
         sys.exit(1)
 
 

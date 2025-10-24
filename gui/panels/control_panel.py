@@ -8,6 +8,7 @@ import tkinter as tk
 import ttkbootstrap as tb
 from ttkbootstrap.constants import *
 from gui.widgets.gpio_widget import GPIOStatusWidget, GPIOOutputWidget, GPIOAlarmWidget
+from gui.panels.digital_io_panel import DigitalIOPanel
 
 
 class ControlPanel:
@@ -69,6 +70,11 @@ class ControlPanel:
         self.gpio_tab = tb.Frame(self.notebook)
         self.notebook.add(self.gpio_tab, text="GPIO")
         self._create_gpio_tab()
+
+        # Digital I/O 탭
+        self.digital_io_tab = tb.Frame(self.notebook)
+        self.notebook.add(self.digital_io_tab, text="Digital I/O")
+        self._create_digital_io_tab()
 
     def _create_statistics_tab(self):
         """Statistics 탭 내용 생성"""
@@ -403,6 +409,16 @@ class ControlPanel:
         """
         if self.gpio_alarm_widget:
             self.gpio_alarm_widget.update_alarm(active, channel, last_time, total_count)
+
+    def _create_digital_io_tab(self):
+        """Digital I/O 탭 내용 생성"""
+        # Digital I/O Panel 생성
+        self.digital_io_panel = DigitalIOPanel(self.digital_io_tab, {
+            'on_output_toggle': self.callbacks.get('on_digital_output_toggle'),
+            'on_start_monitoring': self.callbacks.get('on_start_digital_monitoring'),
+            'on_stop_monitoring': self.callbacks.get('on_stop_digital_monitoring')
+        })
+        self.digital_io_panel.pack(fill=BOTH, expand=True)
 
     def pack(self, **kwargs):
         """팩 배치"""

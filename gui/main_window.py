@@ -72,7 +72,7 @@ class MainWindow:
         self.root = tb.Window(
             title="ADS8668 ADC Monitor - Modular",
             themename="darkly",
-            size=(1400, 800),
+            size=(1600, 900),  # 윈도우 크기 확대
             resizable=(True, True)
         )
 
@@ -94,7 +94,7 @@ class MainWindow:
         content_frame.pack(fill=BOTH, expand=True, pady=(10, 0))
 
         # 좌측: 채널 패널
-        left_frame = tb.Frame(content_frame, width=400)
+        left_frame = tb.Frame(content_frame, width=350)  # 너비 축소 (400 -> 350)
         left_frame.pack(side=LEFT, fill=Y, padx=(0, 5))
         left_frame.pack_propagate(False)
 
@@ -106,9 +106,10 @@ class MainWindow:
         )
         self.channel_panel.pack(fill=BOTH, expand=True)
 
-        # 중앙: 차트 패널
-        center_frame = tb.Frame(content_frame)
-        center_frame.pack(side=LEFT, fill=BOTH, expand=True, padx=5)
+        # 중앙: 차트 패널 (크기 축소)
+        center_frame = tb.Frame(content_frame, width=600)  # 고정 너비 설정
+        center_frame.pack(side=LEFT, fill=BOTH, expand=False, padx=5)  # expand=False로 변경
+        center_frame.pack_propagate(False)
 
         self.chart_panel = ChartPanel(
             center_frame,
@@ -117,11 +118,12 @@ class MainWindow:
         )
         self.chart_panel.pack(fill=BOTH, expand=True)
 
-        # 우측: 컨트롤 패널 + Digital I/O 패널 (GPIO 텍스트 표시를 위해 너비 확대)
-        right_frame = tb.Frame(content_frame, width=360)
-        right_frame.pack(side=RIGHT, fill=Y, padx=(5, 0))
+        # 우측: 컨트롤 패널 (Statistics / GPIO / Digital I/O 탭 포함)
+        right_frame = tb.Frame(content_frame, width=500)
+        right_frame.pack(side=RIGHT, fill=BOTH, expand=True, padx=(5, 0))
         right_frame.pack_propagate(False)
 
+        # Control Panel (내부에 Statistics, GPIO, Digital I/O 탭 포함)
         self.control_panel = ControlPanel(right_frame, {
             'on_scale_change': self.on_scale_mode_change,
             'on_apply_custom_scale': self.on_apply_custom_scale,
@@ -129,17 +131,16 @@ class MainWindow:
             'on_save_snapshot': self.save_chart_snapshot,
             'on_channel_display_toggle': self.on_channel_display_toggle,
             'on_gpio_output_toggle': self.on_gpio_output_toggle,
-            'on_reset_gpio_counters': self.on_reset_gpio_counters
+            'on_reset_gpio_counters': self.on_reset_gpio_counters,
+            # Digital I/O 콜백 추가
+            'on_digital_output_toggle': self.on_digital_output_toggle,
+            'on_start_digital_monitoring': self.start_digital_input_monitoring,
+            'on_stop_digital_monitoring': self.stop_digital_input_monitoring
         })
-        self.control_panel.pack(fill=BOTH, expand=False)
+        self.control_panel.pack(fill=BOTH, expand=True)
 
-        # Digital I/O 패널
-        self.digital_io_panel = DigitalIOPanel(right_frame, {
-            'on_output_toggle': self.on_digital_output_toggle,
-            'on_start_monitoring': self.start_digital_input_monitoring,
-            'on_stop_monitoring': self.stop_digital_input_monitoring
-        })
-        self.digital_io_panel.pack(fill=BOTH, expand=True, pady=(10, 0))
+        # Digital I/O Panel에 대한 참조 (Control Panel 내부에서 생성됨)
+        self.digital_io_panel = self.control_panel.digital_io_panel
 
         # 하단: 상태바
         self.status_bar = StatusBar(main_frame)
@@ -161,8 +162,9 @@ class MainWindow:
             logger.info("-" * 60)
         else:
             self.header_panel.set_connection_status(False)
-            logger.error("✗ Failed to connect to ADS8668")
-            messagebox.showerror("Error", "Failed to connect to ADS8668")
+            self.status_bar.set_status("ADC not connected - GUI test mode")
+            logger.warning("✗ Failed to connect to ADS8668 (GUI test mode enabled)")
+            logger.info("-" * 60)
 
     def on_channel_enable(self, channel, enabled):
         """채널 활성화 콜백"""
@@ -521,12 +523,11 @@ class MainWindow:
         logger.info("Connecting to GPIO controller...")
         if self.gpio_controller.connect():
             self.digital_io_panel.set_connected(True)
-            self.status_bar.set_status("GPIO controller connected")
             logger.info("✓ GPIO controller connected")
             logger.info("-" * 60)
         else:
             self.digital_io_panel.set_connected(False)
-            logger.warning("✗ GPIO controller not available")
+            logger.warning("✗ GPIO controller not available (GUI test mode)")
             logger.info("-" * 60)
 
     def on_digital_output_toggle(self, pin, state):
