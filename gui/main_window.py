@@ -18,9 +18,11 @@ from gui.panels.channel_panel import ChannelPanel
 from gui.panels.chart_panel import ChartPanel
 from gui.panels.control_panel import ControlPanel
 from gui.panels.status_bar import StatusBar
+from gui.panels.digital_io_panel import DigitalIOPanel
 
 from hardware.adc_controller import ADS8668Controller
 from hardware.gpio_monitor import GPIOMonitor
+from hardware.gpio_controller import GPIOController
 from data.data_manager import DataManager
 from data.data_export import DataExporter
 from utils.config_manager import ConfigManager
@@ -37,6 +39,7 @@ class MainWindow:
         # 하드웨어 및 데이터 관리
         self.adc = ADS8668Controller()
         self.gpio_monitor = GPIOMonitor(enable_monitoring=True)
+        self.gpio_controller = GPIOController()  # 디지털 I/O 컨트롤러
         self.data_manager = DataManager(max_points=300)
         self.config_manager = ConfigManager()
         self.data_exporter = DataExporter()
@@ -60,6 +63,7 @@ class MainWindow:
         # GUI 초기화
         self.setup_gui()
         self.connect_adc()
+        self.connect_gpio()  # GPIO 컨트롤러 연결
         self.start_gpio_monitoring()
         self.start_update_loop()
 
@@ -113,7 +117,7 @@ class MainWindow:
         )
         self.chart_panel.pack(fill=BOTH, expand=True)
 
-        # 우측: 컨트롤 패널 (GPIO 텍스트 표시를 위해 너비 확대)
+        # 우측: 컨트롤 패널 + Digital I/O 패널 (GPIO 텍스트 표시를 위해 너비 확대)
         right_frame = tb.Frame(content_frame, width=360)
         right_frame.pack(side=RIGHT, fill=Y, padx=(5, 0))
         right_frame.pack_propagate(False)
@@ -127,7 +131,15 @@ class MainWindow:
             'on_gpio_output_toggle': self.on_gpio_output_toggle,
             'on_reset_gpio_counters': self.on_reset_gpio_counters
         })
-        self.control_panel.pack(fill=BOTH, expand=True)
+        self.control_panel.pack(fill=BOTH, expand=False)
+
+        # Digital I/O 패널
+        self.digital_io_panel = DigitalIOPanel(right_frame, {
+            'on_output_toggle': self.on_digital_output_toggle,
+            'on_start_monitoring': self.start_digital_input_monitoring,
+            'on_stop_monitoring': self.stop_digital_input_monitoring
+        })
+        self.digital_io_panel.pack(fill=BOTH, expand=True, pady=(10, 0))
 
         # 하단: 상태바
         self.status_bar = StatusBar(main_frame)
@@ -503,11 +515,81 @@ class MainWindow:
         self.last_alarm_time = 0
         self.status_bar.set_status("GPIO event counters reset")
 
+    def connect_gpio(self):
+        """GPIO 컨트롤러 연결"""
+        logger.info("-" * 60)
+        logger.info("Connecting to GPIO controller...")
+        if self.gpio_controller.connect():
+            self.digital_io_panel.set_connected(True)
+            self.status_bar.set_status("GPIO controller connected")
+            logger.info("✓ GPIO controller connected")
+            logger.info("-" * 60)
+        else:
+            self.digital_io_panel.set_connected(False)
+            logger.warning("✗ GPIO controller not available")
+            logger.info("-" * 60)
+
+    def on_digital_output_toggle(self, pin, state):
+        """
+        Digital I/O 출력 토글 콜백
+
+        Args:
+            pin: GPIO 핀 번호 (23 또는 24)
+            state: True(HIGH) 또는 False(LOW)
+
+        Returns:
+            bool: 설정 성공 여부
+        """
+        success = self.gpio_controller.set_output(pin, state)
+        if success:
+            self.status_bar.set_status(f"GPIO {pin} output: {'HIGH' if state else 'LOW'}")
+        else:
+            self.status_bar.set_status(f"Failed to set GPIO {pin}")
+        return success
+
+    def start_digital_input_monitoring(self):
+        """Digital I/O 입력 모니터링 시작"""
+        logger.info("Starting digital input monitoring...")
+        success = self.gpio_controller.start_input_monitoring(
+            callback=self.on_digital_input_event
+        )
+        if success:
+            logger.info("✓ Digital input monitoring started")
+            self.status_bar.set_status("Digital input monitoring started")
+        else:
+            logger.error("✗ Failed to start digital input monitoring")
+            self.status_bar.set_status("Failed to start monitoring")
+        return success
+
+    def stop_digital_input_monitoring(self):
+        """Digital I/O 입력 모니터링 중지"""
+        logger.info("Stopping digital input monitoring...")
+        self.gpio_controller.stop_input_monitoring()
+        self.status_bar.set_status("Digital input monitoring stopped")
+
+    def on_digital_input_event(self, pin, edge, timestamp):
+        """
+        Digital I/O 입력 이벤트 콜백
+
+        Args:
+            pin: GPIO 핀 번호
+            edge: 'rising' 또는 'falling'
+            timestamp: 이벤트 발생 시각
+        """
+        # Digital I/O 패널에 이벤트 추가
+        self.digital_io_panel.add_event(pin, edge, timestamp)
+
+        # 상태바 업데이트
+        state = "HIGH" if edge == "rising" else "LOW"
+        self.status_bar.set_status(f"GPIO {pin} event: {state}")
+
     def on_closing(self):
         """프로그램 종료"""
         if self.is_monitoring:
             self.stop_monitoring()
             time.sleep(1)
+        if self.gpio_controller:
+            self.gpio_controller.disconnect()
         if self.gpio_monitor:
             self.gpio_monitor.close()
         if self.adc:

@@ -412,6 +412,23 @@ Egicon Project Team
 
 ---
 
+레이아웃 구조
+┌──────────────────────────────────────────────────────────────┐
+│  Header Panel (Start/Stop, Config, Interval)                │
+├──────────────┬──────────────────────────┬────────────────────┤
+│              │                          │  Control Panel     │
+│  Channel     │      Chart Panel         │  - Y-Scale         │
+│  Panel       │      (Time Domain)       │  - Statistics      │
+│  (8 Ch)      │                          │  - GPIO Status     │
+│              │                          ├────────────────────┤
+│              │                          │  Digital I/O Panel │
+│              │                          │  - Output (23,24)  │
+│              │                          │  - Input (13)      │
+│              │                          │  - Event Log       │
+└──────────────┴──────────────────────────┴────────────────────┘
+│  Status Bar (Time, Messages)                                 │
+└──────────────────────────────────────────────────────────────┘
+
 ## 버전 정보
 
 - **Version**: 2.0 (Modular)
