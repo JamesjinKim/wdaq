@@ -24,7 +24,7 @@ class ChartPanel:
         self.chart_type = chart_type
         self.time_window = time_window
 
-        self.frame = tb.LabelFrame(parent, text="Real-time Chart",
+        self.frame = tb.Labelframe(parent, text="Real-time Chart",
                                    padding=10, bootstyle="info")
         self.chart = None
 

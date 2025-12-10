@@ -92,7 +92,7 @@ class ControlPanel:
 
     def _create_yscale_section(self, parent):
         """Y-Scale 설정 섹션"""
-        scale_frame = tb.LabelFrame(parent, text="Y-Scale Control",
+        scale_frame = tb.Labelframe(parent, text="Y-Scale Control",
                                     padding=10, bootstyle="primary")
         scale_frame.pack(fill=X, pady=(0, 10))
 
@@ -127,7 +127,7 @@ class ControlPanel:
 
     def _create_tools_section(self, parent):
         """차트 도구 섹션"""
-        tools_frame = tb.LabelFrame(parent, text="Chart Tools",
+        tools_frame = tb.Labelframe(parent, text="Chart Tools",
                                     padding=10, bootstyle="secondary")
         tools_frame.pack(fill=X, pady=(0, 10))
 
@@ -143,7 +143,7 @@ class ControlPanel:
 
     def _create_channel_display_section(self, parent):
         """채널 표시 선택 섹션"""
-        channel_frame = tb.LabelFrame(parent, text="Channel Display",
+        channel_frame = tb.Labelframe(parent, text="Channel Display",
                                       padding=10, bootstyle="success")
         channel_frame.pack(fill=X, pady=(0, 10))
 
@@ -159,7 +159,7 @@ class ControlPanel:
 
     def _create_statistics_section(self, parent):
         """통계 정보 섹션"""
-        stats_frame = tb.LabelFrame(parent, text="Statistics",
+        stats_frame = tb.Labelframe(parent, text="Statistics",
                                     padding=10, bootstyle="warning")
         stats_frame.pack(fill=BOTH, expand=True)
 
@@ -317,7 +317,7 @@ class ControlPanel:
         scrollbar.pack(side=RIGHT, fill=Y)
 
         # 입력 핀 섹션
-        input_frame = tb.LabelFrame(scrollable_frame, text="Input Pins",
+        input_frame = tb.Labelframe(scrollable_frame, text="Input Pins",
                                     padding=10, bootstyle="info")
         input_frame.pack(fill=X, pady=(0, 10))
 
@@ -336,7 +336,7 @@ class ControlPanel:
             self.gpio_input_widgets[pin] = widget
 
         # 출력 핀 섹션
-        output_frame = tb.LabelFrame(scrollable_frame, text="Output Pins",
+        output_frame = tb.Labelframe(scrollable_frame, text="Output Pins",
                                      padding=10, bootstyle="success")
         output_frame.pack(fill=X, pady=(0, 10))
 
@@ -354,7 +354,7 @@ class ControlPanel:
         self.gpio_output_widgets[12] = dout_widget
 
         # ADC 알람 섹션
-        alarm_frame = tb.LabelFrame(scrollable_frame, text="ADC Alarm",
+        alarm_frame = tb.Labelframe(scrollable_frame, text="ADC Alarm",
                                     padding=10, bootstyle="warning")
         alarm_frame.pack(fill=X, pady=(0, 10))
 

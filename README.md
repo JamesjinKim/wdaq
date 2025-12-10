@@ -120,23 +120,18 @@ ads8668_monitor/
 
 ## 실행 방법
 
-### 방법 1: 직접 실행 (권장)
+### 방법 1: 실행 스크립트 사용 (권장)
 ```bash
-cd /home/drjins/shinho/Egicon/wdaq/ads8668_monitor
-python3 main.py
-```
-
-### 방법 2: 실행 스크립트 사용
-```bash
-cd /home/drjins/shinho/Egicon/wdaq/ads8668_monitor
 ./run.sh
 ```
 
-### 방법 3: 상위 디렉토리에서 실행
+### 방법 2: 가상 환경 수동 실행
 ```bash
-cd /home/drjins/shinho/Egicon/wdaq
-python3 -c "import sys; sys.path.insert(0, 'ads8668_monitor'); from gui.main_window import MainWindow; app = MainWindow(); app.run()"
+source venv/bin/activate
+python3 main.py
 ```
+
+> **중요**: Raspberry Pi OS의 최신 버전에서는 가상 환경 사용이 필수입니다. 위 방법들은 자동으로 가상 환경을 활성화합니다.
 
 ### 실행 확인
 
@@ -149,26 +144,37 @@ python3 -c "import sys; sys.path.insert(0, 'ads8668_monitor'); from gui.main_win
 
 **하드웨어 연결 실패 (정상)**:
 ```
-ADS8668 연결 실패: 'GPIO busy'
+ADS8668 연결 실패: [Errno 2] No such file or directory
+✗ Failed to connect to ADS8668 (GUI test mode enabled)
 ```
 
-> **참고**: GPIO busy 오류는 하드웨어가 다른 프로세스에서 사용 중이거나, 실제 ADS8668이 연결되어 있지 않아도 발생할 수 있습니다. GUI는 정상적으로 표시됩니다.
+> **참고**:
+> - ADS8668이 실제로 연결되지 않은 경우 위 메시지가 표시됩니다.
+> - **시뮬레이션 모드**: Start 버튼 클릭 시 "시뮬레이션 모드로 실행하시겠습니까?" 대화상자가 표시됩니다.
+>   - "예" 선택: 사인파 + 노이즈 데이터로 GUI 테스트 가능
+>   - "아니오" 선택: 모니터링 취소
+> - 실제 하드웨어 연결 시에는 자동으로 ADC 모드로 동작합니다.
 
 ---
 
 ## 의존성 설치
 
-### 필수 패키지
+### 자동 설치 (권장)
+
+패키지는 이미 가상 환경에 설치되어 있습니다. 새로운 환경에서 설치하려면:
 
 ```bash
+# 가상 환경 생성 (최초 1회만)
+python3 -m venv venv
+
+# 가상 환경 활성화
+source venv/bin/activate
+
+# 패키지 설치
 pip3 install -r requirements.txt
 ```
 
-또는 개별 설치:
-
-```bash
-pip3 install ttkbootstrap matplotlib numpy spidev RPi.GPIO
-```
+> **참고**: Raspberry Pi OS Bookworm 이상에서는 시스템 Python 보호를 위해 가상 환경 사용이 필수입니다 (PEP 668).
 
 ### 패키지 목록
 
@@ -178,7 +184,8 @@ pip3 install ttkbootstrap matplotlib numpy spidev RPi.GPIO
 - matplotlib - 차트 그리기
 - numpy - 수치 계산
 - spidev - SPI 통신
-- RPi.GPIO - GPIO 제어
+- RPi.GPIO - GPIO 제어 (레거시)
+- gpiod - 최신 GPIO 제어 라이브러리
 
 **선택 (고급 신호 분석)**:
 - scipy - 고급 윈도우 함수 (B-Harris 등)
@@ -194,9 +201,19 @@ pip3 install ttkbootstrap matplotlib numpy spidev RPi.GPIO
 
 ### 2. 모니터링 시작
 - 상단 **Start** 버튼 클릭
-- 실시간 데이터 수집 시작
+- **ADC 연결 시**: 실시간 데이터 수집 시작
+- **ADC 미연결 시**:
+  - 시뮬레이션 모드 선택 대화상자 표시
+  - "예" 선택 시 사인파 시뮬레이션 데이터 생성
+  - "아니오" 선택 시 모니터링 취소
 - 차트에 데이터 표시
 - **Interval**: 측정 주기 설정 (0.1~10.0초)
+
+### 시뮬레이션 모드 특징
+- 채널별로 다른 주파수의 사인파 생성 (0.5Hz ~ 1.2Hz)
+- ±5V 진폭의 신호에 노이즈 추가
+- 모든 GUI 기능 테스트 가능 (차트, 통계, 저장 등)
+- 하드웨어 없이 소프트웨어 개발 및 테스트 가능
 
 ### 3. 차트 제어
 - **Y-Scale**:
@@ -246,9 +263,21 @@ pip3 install ttkbootstrap matplotlib numpy spidev RPi.GPIO
 ```
 ImportError: No module named 'ttkbootstrap'
 ```
-**해결**:
+**해결**: 가상 환경이 활성화되어 있는지 확인하세요:
 ```bash
-pip3 install ttkbootstrap
+source venv/bin/activate
+pip3 install -r requirements.txt
+```
+
+### 패키지 설치 오류 (externally-managed-environment)
+```
+error: externally-managed-environment
+```
+**해결**: 가상 환경을 사용하세요:
+```bash
+python3 -m venv venv
+source venv/bin/activate
+pip3 install -r requirements.txt
 ```
 
 ### GPIO 오류
@@ -267,20 +296,27 @@ sudo raspi-config
 # Interface Options → SPI → Enable
 ```
 
-### Permission 오류
+### Permission 오류 (SPI/GPIO)
 ```
 PermissionError: [Errno 13] Permission denied: '/dev/spidev0.0'
+PermissionError: [Errno 13] Permission denied: '/dev/gpiochip0'
 ```
-**해결**:
+**해결**: 사용자를 필요한 그룹에 추가하세요:
 ```bash
+# SPI 및 GPIO 그룹 추가
 sudo usermod -a -G spi,gpio $USER
-# 재로그인 필요
+
+# 시스템 재부팅 또는 재로그인 필요
+sudo reboot
 ```
 
-또는 sudo로 실행:
+**또는 가상 환경에서 sudo로 실행**:
 ```bash
-sudo python3 main.py
+# 가상 환경 경로를 직접 지정하여 실행
+sudo /home/shinho/shinho/wdaq/venv/bin/python main.py
 ```
+
+> **참고**: `gpiod` 라이브러리는 `/dev/gpiochip0` 디바이스에 접근하므로 `gpio` 그룹 권한이 필요합니다.
 
 ### Python 버전 확인
 ```bash
@@ -486,11 +522,18 @@ Egicon Project Team
 
 ## 버전 정보
 
-- **Version**: 2.1 (Digital I/O 추가)
+- **Version**: 2.4
 - **From**: gui_wdaq3.py (900줄 단일 파일)
 - **To**: 30+ 모듈 (4,000+ 줄)
-- **Latest Update**: 2025-10-24
+- **Latest Update**: 2025-12-10
+  - 가상 환경 지원 추가 (venv)
+  - ttkbootstrap API 호환성 수정 (LabelFrame → Labelframe)
+  - gpiod 라이브러리 추가 (최신 GPIO 제어)
+  - 실행 스크립트 개선 (run.sh)
+  - Raspberry Pi OS Bookworm 완벽 지원
+  - **시뮬레이션 모드 추가** (하드웨어 없이 GUI 테스트 가능)
+  - 사인파 + 노이즈 시뮬레이션 데이터 생성
+- **Previous**: 2025-10-24
   - Digital I/O 제어 패널 추가 (GPIO 23, 24, 13)
-  - 하드웨어 연결 없이 GUI 테스트 모드 지원
   - 차트 크기 최적화 (600px 고정)
   - Control Panel 탭 구조 개선 (Statistics/GPIO/Digital I/O)

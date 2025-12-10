@@ -67,7 +67,7 @@ class DigitalIOPanel(ttk.Frame):
     def _create_output_section(self):
         """디지털 출력 섹션 생성"""
         # 출력 프레임
-        output_frame = ttk.LabelFrame(self, text="Digital Output", padding=10)
+        output_frame = ttkb.Labelframe(self, text="Digital Output", padding=10)
         output_frame.pack(fill=BOTH, expand=False)
 
         # GPIO 23 제어
@@ -129,7 +129,7 @@ class DigitalIOPanel(ttk.Frame):
     def _create_input_section(self):
         """디지털 입력 섹션 생성"""
         # 입력 프레임
-        input_frame = ttk.LabelFrame(self, text="Digital Input", padding=10)
+        input_frame = ttkb.Labelframe(self, text="Digital Input", padding=10)
         input_frame.pack(fill=BOTH, expand=False)
 
         # GPIO 13 상태
@@ -159,7 +159,7 @@ class DigitalIOPanel(ttk.Frame):
     def _create_event_log_section(self):
         """이벤트 로그 섹션 생성"""
         # 로그 프레임
-        log_frame = ttk.LabelFrame(self, text="Event Log", padding=10)
+        log_frame = ttkb.Labelframe(self, text="Event Log", padding=10)
         log_frame.pack(fill=BOTH, expand=True)
 
         # 스크롤바와 텍스트 위젯

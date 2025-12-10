@@ -111,61 +111,67 @@ class GPIOMonitor:
 
     def _monitor_pin_gpiod(self, pin):
         """
-        gpiod 기반 핀 모니터링 (별도 스레드) - 이벤트 카운팅 및 상태 업데이트
-        wdaqV3_SampleCode.py와 동일한 방식
+        RPi.GPIO 기반 핀 모니터링 (폴링 방식)
+        gpiod가 제대로 작동하지 않으므로 RPi.GPIO 사용
 
         Args:
             pin: GPIO 핀 번호
         """
         try:
-            chip = gpiod.Chip("gpiochip0")
-            line = chip.get_line(pin)
+            if not GPIO_AVAILABLE:
+                logger.error(f"RPi.GPIO not available for monitoring GPIO {pin}")
+                return
 
-            # 먼저 초기 상태 읽기
-            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_DIR_IN)
-            initial_state = line.get_value() == 1
+            # GPIO 초기화
+            if GPIO.getmode() is None:
+                GPIO.setmode(GPIO.BCM)
+                GPIO.setwarnings(False)
+
+            # 핀을 입력으로 설정 (풀다운 저항)
+            GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
+            # 초기 상태 읽기
+            initial_state = GPIO.input(pin) == GPIO.HIGH
             self.pin_states[pin] = initial_state
-            line.release()
-
-            # 이벤트 감지 모드로 전환
-            line.request(consumer="ads8668-monitor", type=gpiod.LINE_REQ_EV_BOTH_EDGES)
 
             logger.info(f"Started monitoring GPIO {pin} ({self.PIN_NAMES.get(pin, 'Unknown')}) - Initial: {'HIGH' if initial_state else 'LOW'}")
 
+            last_state = initial_state
             last_event_time = 0
-            debounce_time = 0.2  # 200ms 디바운스 (wdaqV3와 동일)
+            debounce_time = 0.2  # 200ms 디바운스
 
+            # 폴링 방식으로 상태 체크 (10ms 간격)
             while self.running:
-                # 이벤트 대기 (블로킹) - wdaqV3_SampleCode.py와 동일
-                line.event_wait()
-
-                if not self.running:
-                    break
-
-                event = line.event_read()
+                current_state = GPIO.input(pin) == GPIO.HIGH
                 current_time = time.time()
 
-                # 디바운스 처리
-                if current_time - last_event_time > debounce_time:
-                    edge = "rising" if event.type == gpiod.LineEvent.RISING_EDGE else "falling"
-                    state = True if edge == "rising" else False
+                # 상태 변화 감지
+                if current_state != last_state:
+                    # 디바운스 처리
+                    if current_time - last_event_time > debounce_time:
+                        edge = "rising" if current_state else "falling"
 
-                    # 상태 캐시 업데이트 (get_pin_state()에서 사용)
-                    self.pin_states[pin] = state
+                        # 상태 캐시 업데이트
+                        self.pin_states[pin] = current_state
 
-                    # 이벤트 카운터 업데이트
-                    self.event_counts[pin][edge] += 1
-                    self.event_counts[pin]["total"] += 1
-                    self.last_event_time[pin] = current_time
-                    last_event_time = current_time
+                        # 이벤트 카운터 업데이트
+                        self.event_counts[pin][edge] += 1
+                        self.event_counts[pin]["total"] += 1
+                        self.last_event_time[pin] = current_time
+                        last_event_time = current_time
 
-                    # 콜백 실행
-                    self._trigger_callbacks(pin, edge)
+                        # 콜백 실행
+                        self._trigger_callbacks(pin, edge)
 
-                    # GPIO 상태 변경 로그 (INFO 레벨로 항상 표시)
-                    state_str = "HIGH" if state else "LOW"
-                    pin_name = self.PIN_NAMES.get(pin, f'Pin {pin}')
-                    logger.info(f"[GPIO Pin {pin:2d}] {pin_name:15s} → {state_str:4s} (Total: {self.event_counts[pin]['total']:3d}, ↑{self.event_counts[pin]['rising']:3d} ↓{self.event_counts[pin]['falling']:3d})")
+                        # GPIO 상태 변경 로그
+                        state_str = "HIGH" if current_state else "LOW"
+                        pin_name = self.PIN_NAMES.get(pin, f'Pin {pin}')
+                        logger.info(f"[GPIO Pin {pin:2d}] {pin_name:15s} → {state_str:4s} (Total: {self.event_counts[pin]['total']:3d}, ↑{self.event_counts[pin]['rising']:3d} ↓{self.event_counts[pin]['falling']:3d})")
+
+                        last_state = current_state
+
+                # 10ms 대기 (폴링 주기)
+                time.sleep(0.01)
 
         except Exception as e:
             logger.error(f"Error monitoring GPIO {pin}: {e}")

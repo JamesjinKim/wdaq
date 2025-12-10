@@ -20,22 +20,27 @@ def gpio_event_callback(pin, edge):
 
 # GPIO 입력 감시 스레드 함수
 def monitor_gpio_interrupt(pin, callback):
-    chip = gpiod.Chip("gpiochip0")
-    line = chip.get_line(pin)
-    line.request(consumer="gp40-monitor", type=gpiod.LINE_REQ_EV_BOTH_EDGES)
+    try:
+        chip_obj = gpiod.chip("/dev/gpiochip0")
+        line = chip_obj.get_line(pin)
+        line.request(consumer="gp40-monitor", type=gpiod.LINE_REQ_EV_BOTH_EDGES)
 
-    last_event_time = 0  # 마지막 이벤트 발생 시각
-    debounce_time = 0.2  # 디바운스 시간 (초) → 필요시 조정 가능
+        last_event_time = 0  # 마지막 이벤트 발생 시각
+        debounce_time = 0.2  # 디바운스 시간 (초) → 필요시 조정 가능
 
-    while True:
-        line.event_wait()
-        event = line.event_read()
-        current_time = time.time()
+        while True:
+            line.event_wait()
+            event = line.event_read()
+            current_time = time.time()
 
-        if current_time - last_event_time > debounce_time:
-            edge = "rising" if event.type == gpiod.LineEvent.RISING_EDGE else "falling"
-            callback(pin, edge)
-            last_event_time = current_time
+            if current_time - last_event_time > debounce_time:
+                edge = "rising" if event.type == gpiod.LineEvent.RISING_EDGE else "falling"
+                callback(pin, edge)
+                last_event_time = current_time
+    except Exception as e:
+        # GPIO 장치에 접근할 수 없는 경우 조용히 종료
+        # (FileNotFoundError, PermissionError, AttributeError, TypeError 등)
+        pass
 
 # 전역변수
 rstr = ["±10V","±5V","±2.5V","±1.25V","±0.5V","0-10V","0-5V","0-2.5V","0-1.25V","0-20mA","NONE"]   # 전압 범위 문자열 목록

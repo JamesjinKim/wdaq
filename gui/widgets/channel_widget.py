@@ -27,7 +27,7 @@ class ChannelWidget:
         self.on_range_callback = on_range_callback
 
         # 위젯 생성
-        self.frame = tb.LabelFrame(parent, text=f"CH{channel}", padding=8, bootstyle="primary")
+        self.frame = tb.Labelframe(parent, text=f"CH{channel}", padding=8, bootstyle="primary")
 
         self._create_widgets()
 

@@ -48,6 +48,7 @@ class MainWindow:
         # 모니터링 상태
         self.is_monitoring = False
         self.monitor_thread = None
+        self.simulation_mode = False  # 시뮬레이션 모드 플래그
         self.data_queue = queue.Queue()
 
         # 설정
@@ -219,8 +220,17 @@ class MainWindow:
     def start_monitoring(self):
         """모니터링 시작"""
         if not self.adc.is_connected:
-            messagebox.showwarning("Warning", "ADC not connected!")
-            return
+            response = messagebox.askyesno(
+                "ADC Not Connected",
+                "ADC가 연결되지 않았습니다.\n\n시뮬레이션 모드로 실행하시겠습니까?\n\n" +
+                "(시뮬레이션 데이터로 GUI 기능을 테스트할 수 있습니다)"
+            )
+            if not response:
+                return
+            self.simulation_mode = True
+            logger.info("Simulation mode enabled")
+        else:
+            self.simulation_mode = False
 
         self.is_monitoring = True
         self.header_panel.set_monitoring_state(True)
@@ -248,10 +258,32 @@ class MainWindow:
 
     def monitor_loop(self):
         """모니터링 루프 (별도 스레드)"""
+        import random
+        import math
         sample_count = 0
+
         while self.is_monitoring:
             try:
-                results = self.adc.read_all_channels()
+                if self.simulation_mode:
+                    # 시뮬레이션 모드: 사인파 + 노이즈 생성
+                    results = {}
+                    for ch in range(8):
+                        if self.data_manager.channel_data[ch]['enabled']:
+                            t = sample_count * self.sample_interval
+                            # 채널별로 다른 주파수의 사인파 생성
+                            freq = 0.5 + ch * 0.1  # 0.5Hz ~ 1.2Hz
+                            amplitude = 5.0  # ±5V
+                            noise = random.uniform(-0.2, 0.2)  # 노이즈
+                            voltage = amplitude * math.sin(2 * math.pi * freq * t) + noise
+                            results[ch] = {
+                                'raw': int((voltage + 10) * 819.2),  # 0~4095 범위로 변환
+                                'voltage': voltage,
+                                'range': '±10V'
+                            }
+                else:
+                    # 실제 ADC 모드
+                    results = self.adc.read_all_channels()
+
                 if results:
                     sample_count += 1
                     self.data_queue.put({
