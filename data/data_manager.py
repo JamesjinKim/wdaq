@@ -49,6 +49,12 @@ class DataManager:
         if 0 <= channel <= 7:
             self.channel_data[channel]['enabled'] = enabled
 
+    def is_channel_enabled(self, channel):
+        """채널 활성화 여부 확인"""
+        if 0 <= channel <= 7:
+            return self.channel_data[channel]['enabled']
+        return False
+
     def clear_channel(self, channel):
         """채널 데이터 초기화"""
         if 0 <= channel <= 7:

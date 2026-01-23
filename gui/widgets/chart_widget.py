@@ -105,7 +105,7 @@ class TimeDomainChart(BaseChartWidget):
         has_data = False
 
         for ch in range(8):
-            if channel_data[ch]['enabled'] and len(channel_data[ch]['timestamps']) > 0:
+            if ch in channel_data and channel_data[ch]['enabled'] and len(channel_data[ch]['timestamps']) > 0:
                 self.lines[ch].set_data(
                     channel_data[ch]['timestamps'],
                     channel_data[ch]['voltages']
@@ -125,7 +125,7 @@ class TimeDomainChart(BaseChartWidget):
                 # Auto mode
                 all_v = []
                 for ch in range(8):
-                    if channel_data[ch]['enabled']:
+                    if ch in channel_data and channel_data[ch]['enabled']:
                         all_v.extend(channel_data[ch]['voltages'])
 
                 if all_v:
